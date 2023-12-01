@@ -60,7 +60,7 @@ ORIGINE: Replacer la tortue au centre du canvas.
 Contributions
 Les contributions sont les bienvenues ! Si vous souhaitez améliorer ou étendre ce projet, n'hésitez pas à ouvrir une pull request.
 
-Auteurs
+
 GUISSE Ibrahima / iguisse97@gmail.com
 Licence
 Ce projet est sous licence MIT.
