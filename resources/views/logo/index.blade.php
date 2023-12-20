@@ -28,10 +28,9 @@
                         <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
                             @include('chat.index')
                         </div>
-                        <script>
+                        <script >
                             // Récupérer le contexte du canvas
-                            var canvas = document.getElementById('logoCanvas');
-                            var ctx = canvas.getContext('2d');
+                            
                        
                                 function submitForm() {
                                 var command = document.getElementById('commandInput').value;
@@ -61,26 +60,92 @@
                                 .catch(error => {
                                     console.error('Erreur lors de l\'envoi de la commande :', error);
                                 });
-    }
-                        
+                                    }
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    var canvas = document.getElementById('logoCanvas');
+                                    var ctx = canvas.getContext('2d');
+                                    
+                                    // Utilisation de la fonction drawTurtle
+                                });
+                                var ctx = document.getElementById("logoCanvas").getContext("2d");
+                                var canvas = document.getElementById('logoCanvas');
+                                var centerX = canvas.width / 2;
+                            var centerY = canvas.height / 2; 
+                            var triangleSize = 10; // Adjust the size of the triangle as needed
+                            var isTurtleVisible = true;  // Variable pour suivre la visibilité de la tortue
+
                             function updateCanvas(data) {
-                                // Effacez le contenu actuel du canvas
-                                ctx.clearRect(10, 10, canvas.width, canvas.height);
-                        
-                                // Exemple de dessin basique (la logique réelle dépendra de la commande exécutée)
-                                drawTurtle(data.x, data.y);
-
-
-                                console.log('Données reçues du serveur :',data);
+                              
+                            if (isTurtleVisible) {
+                                drawTurtle(ctx, data.x, data.y, data.angle, data.isDrawing);
+                            } else {
+                                // Si la tortue n'est pas visible, effacez simplement le canvas
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
                             }
-                            function drawTurtle(x, y) {
-                            // Dessinez la tortue en fonction des coordonnées x, y
-                            ctx.beginPath();
-                            ctx.arc(x, y, 10, 0, 2 * Math.PI);
-                            //ctx.fillStyle = 'green';
-                            ctx.fill();
-                            ctx.stroke();
+
+                            if (data.command === 'CT') {
+                                // Cacher la tortue
+                                hideTurtle();
+                            } else if (data.command === 'MC') {
+                                // Montrer la tortue
+                                showTurtle();
+                            }
+
+                            console.log('Données reçues du serveur :', data);
                         }
+
+                            function hideTurtle() {
+                                // Logique pour cacher la tortue
+                                isTurtleVisible = false;
+                                updateCanvas();  // Appel sans argument, car vous n'avez pas de nouvelles données
+                            }
+
+                            function showTurtle() {
+                                // Logique pour montrer la tortue
+                                isTurtleVisible = true;
+                                // Appel sans argument, car vous n'avez pas de nouvelles données
+                                updateCanvas();
+                            }
+                          
+                            function drawTurtle(ctx, centerX, centerY, angle, isDrawing) {
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                            if (!isTurtleVisible) {
+                                return;  // Quitter la fonction si la tortue n'est pas visible
+                            }
+
+                            if (isDrawing) {
+                                // Dessiner la trace
+                                ctx.beginPath();
+                                ctx.moveTo(previousX, previousY);
+                                ctx.lineTo(centerX, centerY);
+                                ctx.stroke();
+                            }
+
+                            ctx.save();
+                            ctx.translate(centerX, centerY);
+                            ctx.rotate(angle * Math.PI / 180);
+
+                            ctx.beginPath();
+                            ctx.moveTo(0, -triangleSize / 2);
+                            ctx.lineTo(triangleSize / 2, triangleSize / 2);
+                            ctx.lineTo(-triangleSize / 2, triangleSize / 2);
+                            ctx.closePath();
+
+                            if (isDrawing) {
+                                // Changer la couleur du trait selon les besoins
+                                ctx.strokeStyle = "black";
+                                ctx.stroke();
+                            } else {
+                                // Changer la couleur de remplissage selon les besoins
+                                ctx.fillStyle = "green";
+                                ctx.fill();
+                            }
+
+                            ctx.restore();
+                        }
+
+                                            
                             document.getElementById('fileInput').addEventListener('change', function () {
                                 var fileList = this.files;
                                 var fileNames = Array.from(fileList).map(file => file.name);
@@ -107,7 +172,6 @@
                                         console.error('Erreur lors de l\'effacement de la console :', error);
                                     });
                                 }
-
                                 var command = "FCC #RRGGBB"; // Remplacez #RRGGBB par la couleur RGB souhaitée
                                 var command = "FCAP 45"; // Remplacez 45 par l'angle souhaité
                                 var command = "FPOS 100 50"; // Remplacez 100 et 50 par les coordonnées souhaitées

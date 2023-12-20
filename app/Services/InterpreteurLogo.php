@@ -1,12 +1,30 @@
 <?php
+
 namespace App\Services;
 
 
 class InterpreteurLogo
 {
+    protected $x = 0;
+    private static $instance = null;
+    private function __construct()
+    {
 
- 
-
+    }
+    public static function getInstance(){
+        if (is_null(self::$instance)) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    public function getX()
+    {
+        return $this->x;
+    }
+    public function setX()
+    {
+        $this->x += 1;
+    }
     protected $command = array (
         "Avancer" => "AV",
         "Reculer"=> "RE",
@@ -32,17 +50,14 @@ class InterpreteurLogo
     protected $angle = 0;
     protected $isVisible = true;
     protected $isHidden = true ;
-    protected $isDrawing = true; // Nouvelle variable pour gérer le mode de dessin
+// Nouvelle variable pour gérer le mode de dessin
 
-
-    public function avancer()
+        public function avancer()
     {
         $newX = $this->positionX + cos(deg2rad($this->angle));
         $newY = $this->positionY + sin(deg2rad($this->angle));
 
-        if ($this->isDrawing) {
-            // Logique pour dessiner une ligne de ($this->positionX, $this->positionY) à ($newX, $newY)
-        }
+      
 
         $this->positionX = $newX;
         $this->positionY = $newY;
@@ -53,9 +68,7 @@ class InterpreteurLogo
         $newX = $this->positionX - cos(deg2rad($this->angle));
         $newY = $this->positionY - sin(deg2rad($this->angle));
 
-        if ($this->isDrawing) {
-            // Logique pour dessiner une ligne de ($this->positionX, $this->positionY) à ($newX, $newY)
-        }
+   
 
         $this->positionX = $newX;
         $this->positionY = $newY;
@@ -71,10 +84,7 @@ class InterpreteurLogo
         $this->angle -= 90; // Tourne de 90 degrés vers la gauche
     }
 
-    public function laTortueNeLaissePasDeTrace()
-    {
-        $this->isDrawing = false; // Passe en mode "sans trace"
-    }
+   
    
     // ... Ajoutez des méthodes pour chaque commande ...
 
@@ -113,3 +123,5 @@ class InterpreteurLogo
 
 
 }
+
+
