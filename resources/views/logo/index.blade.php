@@ -71,8 +71,11 @@
                                 var canvas = document.getElementById('logoCanvas');
                                 var centerX = canvas.width / 2;
                             var centerY = canvas.height / 2; 
-                            var triangleSize = 10; // Adjust the size of the triangle as needed
+                            var triangleSize = 20; // Adjust the size of the triangle as needed
                             var isTurtleVisible = true;  // Variable pour suivre la visibilité de la tortue
+                            var previousX = 0;
+                            var previousY = 0;
+                            var previousPositions = [];
 
                             function updateCanvas(data) {
                               
@@ -85,6 +88,7 @@
 
                             if (data.command === 'CT') {
                                 // Cacher la tortue
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
                                 hideTurtle();
                             } else if (data.command === 'MC') {
                                 // Montrer la tortue
@@ -97,7 +101,12 @@
                             function hideTurtle() {
                                 // Logique pour cacher la tortue
                                 isTurtleVisible = false;
+                                //ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                clearCanvas();
+
                                 updateCanvas();  // Appel sans argument, car vous n'avez pas de nouvelles données
+                                previousX = 0;
+                                previousY = 0;
                             }
 
                             function showTurtle() {
@@ -113,6 +122,19 @@
                             if (!isTurtleVisible) {
                                 return;  // Quitter la fonction si la tortue n'est pas visible
                             }
+
+                            previousPositions.push({ x: centerX, y: centerY });
+
+                            ctx.beginPath();
+                            ctx.moveTo(previousX, previousY);
+                            ctx.lineTo(centerX, centerY);
+                            ctx.stroke();
+
+                            // ... (le reste de votre code)
+
+                            // Mettre à jour les coordonnées précédentes
+                            previousX = centerX;
+                            previousY = centerY;
 
                             if (isDrawing) {
                                 // Dessiner la trace
@@ -144,7 +166,16 @@
 
                             ctx.restore();
                         }
-
+                        function clearCanvas() {
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            // Redessiner les anciennes positions sans les lignes de traçage
+                            for (var i = 0; i < previousPositions.length - 1; i++) {
+                                ctx.beginPath();
+                                ctx.moveTo(previousPositions[i].x, previousPositions[i].y);
+                                ctx.lineTo(previousPositions[i + 1].x, previousPositions[i + 1].y);
+                                ctx.stroke();
+                            }
+                        }
                                             
                             document.getElementById('fileInput').addEventListener('change', function () {
                                 var fileList = this.files;

@@ -57,7 +57,7 @@ class LogoController extends Controller
         $initialPosition = [
             'x' => $canvasWidth / 2, // Valeur initiale pour la coordonnée x
             'y' => $canvasHeight / 2, // Valeur initiale pour la coordonnée y
-            'angle' => 0, // Valeur initiale pour l'angle
+            'angle' => 90, // Valeur initiale pour l'angle
         ];
 
         return $initialPosition;
@@ -197,8 +197,7 @@ class LogoController extends Controller
             return $currentAngle;            
             break;
         case 'FCAP':    
-                $angle = 45; // Récupérer l'angle spécifié dans la commande
-                $newPosition = $this->setAbsoluteAngle($angle);
+                $newPosition = $this->getInitialTurtlePosition();
                  break;
         case 'FPOS':
             $x = $parts[1]; // Récupérer la coordonnée x spécifiée dans la commande
@@ -261,16 +260,18 @@ class LogoController extends Controller
         // Logique pour interpréter une seule commande
         switch ($command) {
             case 'AV':
-                $newPosition = $this->moveForward($distance, 1);
+                $newPosition = $this->moveForward($distance, 10);
                 break;
             case 'RE':
-                $newPosition = $this->moveBack($distance, 1);
+                $newPosition = $this->moveBack($distance, 10);
                 break;
             case 'TD':
-                $newPosition = $this->turnRight($angle,1);
+                $angle = 45;
+                $newPosition = $this->turnRight($angle,90);
                 break;
             case 'TG':
-                $newPosition = $this->turnLeft($angle,1);
+                $angle = 45;
+                $newPosition = $this->turnLeft($angle,90);
                 break;
             
 
