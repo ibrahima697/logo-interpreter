@@ -22,6 +22,9 @@ class LogoController extends Controller
     protected $canvasWidth;  // Ajustez la valeur en conséquence
     protected $canvasHeight;
     protected $angleInRadians;
+    private $isTurtleVisible = true; // La tortue est visible par défaut
+    private $penColor = "black"; // Couleur du trait par défaut
+    private $previousPositions = []; // Tableau pour stocker les positions précédentes
 
     protected $session ;
 
@@ -57,11 +60,16 @@ class LogoController extends Controller
         $initialPosition = [
             'x' => $canvasWidth / 2, // Valeur initiale pour la coordonnée x
             'y' => $canvasHeight / 2, // Valeur initiale pour la coordonnée y
-            'angle' => 90, // Valeur initiale pour l'angle
+            'angle' => 0, // Valeur initiale pour l'angle
         ];
 
         return $initialPosition;
     }
+    private function stopDrawing()
+{
+    $this->currentPosition['isDrawing'] = false;
+    $this->setCurrentPosition($this->currentPosition);
+}
     public function __construct()
     {
         if (session()->has('currentPosition')) {
@@ -98,6 +106,10 @@ class LogoController extends Controller
             // ... autres propriétés de position ...
         ];
     }
+    private function getPosition()
+{
+    return $this->currentPosition;
+}
     private function interpretWithMLLibrary($commands,$currentPosition)
     {
         $parts = explode(' ', $commands);
@@ -151,74 +163,80 @@ class LogoController extends Controller
             $angle = isset($parts[1]) ? intval($parts[1]) :90;
             $newPosition = $this->turnLeft($angle);
             break;
-            case 'LC':
-                $distance = isset($parts[1]) ? intval($parts[1]) : 1;
-                $newPosition = $this->noTrack($newPosition, $currentPosition['angle']);
-                break;
-            
-            case 'BC':
-                $distance = isset($parts[1]) ? intval($parts[1]) : 1;
-                $newPosition = $this->trackBack($newPosition, $currentPosition['angle']);
-                break;
+        case 'LC':
+            $distance = isset($parts[1]) ? intval($parts[1]) : 1;
+            $newPosition = $this->noTrack($newPosition, $currentPosition['angle']);
+            break;
+        
+        case 'BC':
+            $distance = isset($parts[1]) ? intval($parts[1]) : 1;
+            $newPosition = $this->trackBack($newPosition, $currentPosition['angle']);
+            break;
         case 'CT':
+            // Logique pour cacher la tortue
             $interpretationResult = ['command' => 'CT'];
-            break;    
+            break;
+        
         case 'MC':
+            // Logique pour montrer la tortue
             $interpretationResult = ['command' => 'MC'];
             break;
-            case 'VE':
-                $newPosition = $this->clearScreenAndMoveToCenter($newPosition);
-                break;
         case 'NETTOIE':
-            $newPosition = $this->clearScreenWithoutMoving($newPosition);
+            $interpretationResult = ['command' => 'NETTOIE'];
             break;
+        case 'VE':
+            // Logique pour effacer l'écran et replacer la tortue au centre
+            $interpretationResult = ['command' => 'VE'];
+            $this->currentPosition = $this->getInitialTurtlePosition();
+            break;
+                
         case 'VT':
-            $newPosition = $this->clearCanvas($currentPosition);
-        break;
+            $this->getInitialTurtlePosition();
+            break;
         case 'ORIGINE':
-            $newPosition = $this->moveToCenter($newPosition, $canvasWidth, $canvasHeight);
+            $newPosition = $this->clearScreenWithoutMoving($newPosition);
             break;
         case 'FCB':
             if (count($parts) >= 2) {
-                $color = $parts[1]; // Récupérez la couleur spécifiée dans la commande
-                $newPosition = $this->changeBackgroundColor($color, $currentPosition['backgroundcolor']);
+                $backgroundColor = $parts[1]; // Récupérez la couleur spécifiée dans la commande
+                $newBackgroundColor = $this->changeBackgroundColor($backgroundColor);
             } else {
                 // Gérez le cas où la commande ne contient pas suffisamment d'arguments
                 return response()->json(['error' => 'La commande FCB nécessite une couleur en argument'], 400);
             }
             break;
         case 'FCC':
-            $color = $parts[1]; // Récupérer la couleur spécifiée dans la commande
-            $newPosition = $this->setPenColor($color, $currentPosition);
-            break;
-        case 'CAP':
+               // Logique pour changer la couleur du trait
+               $red = isset($parts[1]) ? intval($parts[1]) : 0;
+               $green = isset($parts[2]) ? intval($parts[2]) : 0;
+               $blue = isset($parts[3]) ? intval($parts[3]) : 0;
+           
+               $newPosition = $this->changePenColor($red, $green, $blue);
+               break;
+
+        case 'FCAP':
             $angle =  $parts[1];
-            $currentAngle =$this->angle;
-            return $currentAngle;            
+            $newPosition = $this->setAbsoluteAngle($angle);       
             break;
-        case 'FCAP':    
-                $newPosition = $this->getInitialTurtlePosition();
-                 break;
+        case 'CAP':    
+            $newPosition = $this->setAbsoluteAngle(90);
+            break;
         case 'FPOS':
-            $x = $parts[1]; // Récupérer la coordonnée x spécifiée dans la commande
-            $y = $parts[2]; // Récupérer la coordonnée y spécifiée dans la commande
-            $newPosition = $this->setAbsolutePosition($x, $y);
-            break;
+        // Logique pour positionner la tortue
+        if (isset($parts[1]) && isset($parts[2])) {
+            $newX = intval($parts[1]);
+            $newY = intval($parts[2]);
+            $newPosition = $this->setPosition($newX, $newY);
+        }
+        break;
         case 'POS':
                 // Logique pour retourner la position de la tortue
-                $currentPosition = [
-                    'x' => $this->positionX,
-                    'y' => $this->positionY,
-                    'angle' => $this->angle,
-                    // ... autres propriétés de position ...
-                ];
-            
-                return $currentPosition;
+                $newPosition = $this->getPosition();
         break;
         case 'REPETE':
             // Logique pour répéter un bloc d'instructions
             $repeatCount = isset($parts[1]) ? intval($parts[1]) : 1;
-            $block = implode(' ', array_slice($parts, 3, -1)); // Obtenez le bloc d'instructions entre crochets
+            $block = implode(' ', array_slice($parts, 2));
             $newPosition = $this->repeatBlock($block, $repeatCount, $currentPosition);
             break;
 
@@ -237,7 +255,7 @@ class LogoController extends Controller
     // Remplacer ceci par votre logique réelle
     
     }
-    private function repeatBlock($block, $repeatCount, $currentPosition)
+     private function repeatBlock($block, $repeatCount, $currentPosition)
     {
         $newPosition = $currentPosition;
 
@@ -250,9 +268,9 @@ class LogoController extends Controller
         }
 
         return $newPosition;
-    }
+    } 
 
-     private function interpretSingleCommand($command, $currentPosition)
+      private function interpretSingleCommand($command, $currentPosition)
     {
         // Logique pour interpréter une seule commande
         $command = strtoupper(trim($command));
@@ -260,21 +278,18 @@ class LogoController extends Controller
         // Logique pour interpréter une seule commande
         switch ($command) {
             case 'AV':
-                $newPosition = $this->moveForward($distance, 10);
+                $newPosition =  $this->moveForward(isset($parts[1]) ? intval($parts[1]) : 1);
                 break;
             case 'RE':
-                $newPosition = $this->moveBack($distance, 10);
+                $newPosition =  $this->moveBack(isset($parts[1]) ? intval($parts[1]) : 1);
                 break;
             case 'TD':
-                $angle = 45;
-                $newPosition = $this->turnRight($angle,90);
+                $newPosition = $this->turnRight(isset($parts[1]) ? intval($parts[1]) : 0);
                 break;
             case 'TG':
-                $angle = 45;
-                $newPosition = $this->turnLeft($angle,90);
+                $newPosition = $this->turnLeft(isset($parts[1]) ? intval($parts[1]) : 0);
                 break;
             
-
             default:
                 // Cas par défaut pour les commandes non reconnues
                 $newPosition = $currentPosition;
@@ -283,39 +298,55 @@ class LogoController extends Controller
 
         return $newPosition;
     } 
-    
-
+     
 
     private function moveForward($distance)
-{
-    $this->currentPosition = $this->getCurrentPosition();
+    {
+        $this->currentPosition = $this->getCurrentPosition();
+    
+        // Calculer les nouvelles coordonnées en fonction de l'angle et de la distance
+        $angleInRadians = deg2rad($this->currentPosition['angle']);
+        $deltaX = $distance * cos($angleInRadians);
+        $deltaY = $distance * sin($angleInRadians);
+    
+        if (array_key_exists('x', $this->currentPosition)) {
+            $this->currentPosition['x'] += $deltaX;
+        }
+    
+        if (array_key_exists('y', $this->currentPosition)) {
+            $this->currentPosition['y'] += $deltaY;
+        }
+        // Indiquer que la tortue est en train de dessiner
+        $this->currentPosition['isDrawing'] = true;
 
-    // Calculer les nouvelles coordonnées en fonction de l'angle et de la distance
-    if (array_key_exists('x', $this->currentPosition)) {
-        $this->currentPosition['x'] += $distance;
+        // Mise à jour de la position actuelle
+        $this->setCurrentPosition($this->currentPosition);
+    
+        return $this->currentPosition;
     }
 
-    // Mise à jour de la position actuelle
-    $this->setCurrentPosition($this->currentPosition);
-
-    return $this->currentPosition;
-}
-
-private function moveBack($distance)
-{
-    $this->currentPosition = $this->getCurrentPosition();
-
-    // Calculer les nouvelles coordonnées en fonction de l'angle et de la distance
-    if (array_key_exists('x', $this->currentPosition)) {
-        $this->currentPosition['x'] -= $distance;
+    private function moveBack($distance)
+    {
+        $this->currentPosition = $this->getCurrentPosition();
+    
+        // Calculer les nouvelles coordonnées en fonction de l'angle et de la distance
+        $angleInRadians = deg2rad($this->currentPosition['angle']);
+        $deltaX = $distance * cos($angleInRadians);
+        $deltaY = $distance * sin($angleInRadians);
+    
+        if (array_key_exists('x', $this->currentPosition)) {
+            $this->currentPosition['x'] -= $deltaX;
+        }
+    
+        if (array_key_exists('y', $this->currentPosition)) {
+            $this->currentPosition['y'] -= $deltaY;
+        }
+    
+        // Mise à jour de la position actuelle
+        $this->setCurrentPosition($this->currentPosition);
+    
+        return $this->currentPosition;
     }
-
-    // Mise à jour de la position actuelle
-    $this->setCurrentPosition($this->currentPosition);
-
-    return $this->currentPosition;
-}
-
     
     private function turnRight($angle)
 {
@@ -393,6 +424,16 @@ private function trackBack($currentPosition, $angle)
     
         return $newPosition;
     }
+    private function hideTurtle()
+{
+    $this->isTurtleVisible = false;
+}
+
+private function showTurtle()
+{
+    $this->isTurtleVisible = true;
+}
+
 private function clearScreenWithoutMoving()
 {
     // Logique pour effacer l'écran sans changer la position
@@ -406,19 +447,15 @@ private function clearScreenWithoutMoving()
 
 private function clearCanvas()
 {
-    // Logique pour effacer le canvas
+    // Réinitialiser les positions précédentes
+    $this->previousPositions = [];
 
-    // Vous devez définir la largeur et la hauteur du canvas ici
-        $canvasWidth = 500  ;
-        $canvasHeight = 500 ; 
-  
-    $newPosition['x'] = $canvasWidth / 2;
-    $newPosition['y'] = $canvasHeight / 2;
-    $newPosition['angle'] = 0;
-    $newPosition['isVisible'] = false;
-  
+    // Réinitialiser la position actuelle
+    $this->currentPosition = $this->getInitialTurtlePosition();
 
-    return $newPosition;
+    // Réinitialiser d'autres propriétés si nécessaire
+    $this->isTurtleVisible = true; // Par exemple, remettre la tortue visible
+    $this->penColor = "black"; // Réinitialiser la couleur du trait par défaut
 }
 
 private function moveToCenter($newPosition)
@@ -435,7 +472,17 @@ private function moveToCenter($newPosition)
 
     return $newPosition;
 }
+private function setPosition($newX, $newY)
+{
+    // Mettez à jour les coordonnées de la position actuelle
+    $this->currentPosition['x'] = $newX;
+    $this->currentPosition['y'] = $newY;
+    $this->setCurrentPosition($this->currentPosition);
 
+    return $this->currentPosition;
+
+
+}
     private function changeLineColor($color, $currentPosition)
     {
         // Changer la couleur du trait
@@ -463,26 +510,28 @@ private function moveToCenter($newPosition)
     }
 
     // Utilisation dans votre méthode changeBackgroundColor
-    private function changeBackgroundColor($color, $currentPosition)
+    private function changeBackgroundColor($backgroundColor)
     {
-        $backgroundColor = $this->getBackgroundColor($color);
-    // Changer la couleur du fond
-    if ($color) {
-        $newPosition['backgroundColor'] = $color;
-    } else {
-        // Si aucune couleur n'est spécifiée, conservez la couleur actuelle
+        // Implement logic to validate and set the new background color
+        $newBackgroundColor = $backgroundColor; // Replace this with your validation logic
+    
+        // Additional logic if needed
+    
+        // Return the updated position or other relevant information
+        return [
+            'backgroundColor' => $newBackgroundColor,
+        ];
     }
 
-    // Copiez les autres indicateurs sans les modifier
-    $newPosition['x'] = $currentPosition['x'];
-    $newPosition['y'] = $currentPosition['y'];
-    $newPosition['angle'] = $currentPosition['angle'];
-    $newPosition['isVisible'] = $currentPosition['isVisible'];
+    private function changePenColor($red, $green, $blue)
+    {
+        $this->currentPosition['penColor'] = "rgb($red, $green, $blue)";
+        $this->setCurrentPosition($this->currentPosition);
 
-    // Set la couleur de fond du canvas
-    return $newPosition;
+        return $this->currentPosition;
+
+
     }
-
     private function setPenColor($color, $currentPosition)
     {
         $newPosition['lineColor'] = $color;
@@ -499,25 +548,83 @@ private function moveToCenter($newPosition)
 
     private function setAbsoluteAngle($angle)
     {
-        // Implémenter la logique pour fixer l'angle de la tortue de façon absolue
-        // S'assurer que l'angle est dans la plage [0, 360)
-        $angle = ($angle + 360) % 360;
+    // Assurez-vous que l'angle est dans la plage [0, 360)
+    $angle = ($angle + 360) % 360;
 
-        // Mise à jour de l'angle dans la nouvelle position
-        $newPosition['angle'] = $angle;
+    // Mise à jour de l'angle dans la position actuelle
+    $this->currentPosition['angle'] = $angle;
 
-        // Copier les autres coordonnées sans les modifier
-        $newPosition['x'] = $currentPosition['x'];
-        $newPosition['y'] = $currentPosition['y'];
-        $newPosition['isVisible'] = true;
-      
-        // s'assurer de valider et formater correctement l'angle
-        $newPosition['angle'] = $currentPosition['angle'];
+    // S'assurer que les autres propriétés de position restent inchangées
+    $this->setCurrentPosition($this->currentPosition);
 
-        // ...
-
-        // Retourner la position actuelle de la tortue ou d'autres données nécessaires
-        return $newPosition;
+    // Retourner la position mise à jour
+    return $this->currentPosition;
     }
 
+    private $userProcedures = [];
+
+    public function interpret($commands)
+    {
+        $parts = explode(' ', $commands);
+        $action = strtoupper($parts[0]);
+
+        switch ($action) {
+            case 'POUR':
+                $this->defineProcedure($parts);
+                break;
+            default:
+                $this->executeProcedure($action, $parts);
+                break;
+        }
+    }
+
+    private function defineProcedure($parts)
+    {
+        $procedureName = $parts[1];
+        $params = array_slice($parts, 3, -1); // Les paramètres de la procédure
+        $instructions = implode(' ', array_slice($parts, 2)); // Les instructions de la procédure
+
+        $this->userProcedures[$procedureName] = [
+            'params' => $params,
+            'instructions' => $instructions,
+        ];
+    }
+
+    private function executeProcedure($procedureName, $params)
+    {
+        if (array_key_exists($procedureName, $this->userProcedures)) {
+            $procedure = $this->userProcedures[$procedureName];
+
+            // Créer un tableau associatif de paramètres
+            $paramValues = [];
+            foreach ($procedure['params'] as $index => $paramName) {
+                $paramValues[$paramName] = isset($params[$index + 1]) ? intval($params[$index + 1]) : 0;
+            }
+
+            // Remplacer les paramètres dans les instructions
+            $instructions = $procedure['instructions'];
+            foreach ($paramValues as $paramName => $paramValue) {
+                $instructions = str_replace(":$paramName", $paramValue, $instructions);
+            }
+
+            // Interpréter les instructions
+            $this->interpret($instructions);
+        } else {
+            // Procédure non définie
+            echo "Erreur: Procédure '$procedureName' non définie\n";
+        }    
+    }
+
+    private function interpretRecursive($instructions)
+    {
+        $parts = explode(' ', $instructions);
+
+        foreach ($parts as $part) {
+            // Ignorer les espaces vides
+            if (!empty($part)) {
+                // Interpréter chaque commande, y compris les procédures appelées récursivement
+                $this->interpret($part);
+            }
+        }
+    }
 }

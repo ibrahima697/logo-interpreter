@@ -32,7 +32,7 @@
                             // Récupérer le contexte du canvas
                             
                        
-                                function submitForm() {
+                        function submitForm() {
                                 var command = document.getElementById('commandInput').value;
                                 console.log('Commande envoyée :', command);
 
@@ -60,6 +60,48 @@
                                 .catch(error => {
                                     console.error('Erreur lors de l\'envoi de la commande :', error);
                                 });
+                                var command = commandInput.value.toUpperCase(); // Convertir en majuscules pour la correspondance insensible à la casse
+
+                                // Exemple de traitement de commandes spécifiques
+                                if (command === 'CT') {
+                                    // Logique pour cacher la tortue
+                                    clearCanvas();
+                                    hideTurtle();
+                                    console.log('Commande reçue : Cacher la tortue');
+                                    // Appeler la fonction pour cacher la tortue ici
+                                } else if (command === 'MC') {
+                                    // Logique pour montrer la tortue
+                                    showTurtle();
+
+                                    console.log('Commande reçue : Montrer la tortue');
+                                    // Appeler la fonction pour montrer la tortue ici
+                                } else if (command === 'VE') {
+                                    // Logique pour effacer le canvas
+                                  clearCanvas();
+
+                                    console.log('Commande reçue : Replacer la tortue au centre');
+                                    // Appeler la fonction pour montrer la tortue ici
+                                } else if (command === 'NETTOIE'){
+                                    previousPositions = [];
+                                    console.log('Commande reçue : effacer les traits');
+                                } else if (data.command === 'BC') {
+                                    // Baisser le crayon
+                                    penDown();
+                                } else if (data.command === 'LC') {
+                                    // Lever le crayon
+                                    penUp();
+                                } else if (data.command === 'FCB') {
+                                    // Change the background color of the canvas
+                                    changeCanvasBackgroundColor(data.backgroundColor);
+                                }
+                                 else {
+                                    // Commande non reconnue
+                                    console.log('Commande non reconnue : ' + command);
+                                }
+
+                                // Effacer le champ de saisie après le traitement de la commande
+                                commandInput.value = '';
+
                                     }
                                 document.addEventListener('DOMContentLoaded', function() {
                                     var canvas = document.getElementById('logoCanvas');
@@ -70,142 +112,141 @@
                                 var ctx = document.getElementById("logoCanvas").getContext("2d");
                                 var canvas = document.getElementById('logoCanvas');
                                 var centerX = canvas.width / 2;
-                            var centerY = canvas.height / 2; 
-                            var triangleSize = 20; // Adjust the size of the triangle as needed
-                            var isTurtleVisible = true;  // Variable pour suivre la visibilité de la tortue
-                            var previousX = 0;
-                            var previousY = 0;
-                            var previousPositions = [];
+                                var centerY = canvas.height / 2; 
+                                var triangleSize = 10; // Adjust the size of the triangle as needed
+                                var isTurtleVisible = true;  // Variable pour suivre la visibilité de la tortue
+                                var previousX = 0;
+                                var previousY = 0;
+                                var previousPositions = [];
+                                let isPenDown = true; // Par défaut, le crayon est baissé
 
                             function updateCanvas(data) {
-                              
+                                console.log('Données reçues du serveur :', data);
+
                             if (isTurtleVisible) {
-                                drawTurtle(ctx, data.x, data.y, data.angle, data.isDrawing);
+                                drawTurtle(ctx, data.x, data.y, data.angle, data.isDrawing, data.penColor);
                             } else {
                                 // Si la tortue n'est pas visible, effacez simplement le canvas
                                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                             }
-
-                            if (data.command === 'CT') {
-                                // Cacher la tortue
-                                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                                hideTurtle();
-                            } else if (data.command === 'MC') {
-                                // Montrer la tortue
-                                showTurtle();
+                            if (data.isDrawing) {
+                                // Dessiner une ligne de la dernière position à la nouvelle position
+                                ctx.beginPath();
+                                ctx.moveTo(previousX, previousY);
+                                ctx.lineTo(data.x, data.y);
+                                ctx.stroke();
                             }
+                                previousX = data.x;
+                                previousY = data.y;
 
                             console.log('Données reçues du serveur :', data);
                         }
 
                             function hideTurtle() {
-                                // Logique pour cacher la tortue
-                                isTurtleVisible = false;
-                                //ctx.clearRect(0, 0, canvas.width, canvas.height);
-                                clearCanvas();
+                            console.log('Cacher la tortue');
+                            isTurtleVisible = false;
+                            updateCanvas();
+                            previousX = 0;
+                            previousY = 0;
+                        }
 
-                                updateCanvas();  // Appel sans argument, car vous n'avez pas de nouvelles données
-                                previousX = 0;
-                                previousY = 0;
-                            }
+                        function showTurtle() {
+                            console.log('Montrer la tortue');
+                            isTurtleVisible = true;
+                            updateCanvas();
+                        }
+                        function penDown() {
+                            isPenDown = true;
+                            updateCanvas();
 
-                            function showTurtle() {
-                                // Logique pour montrer la tortue
-                                isTurtleVisible = true;
-                                // Appel sans argument, car vous n'avez pas de nouvelles données
-                                updateCanvas();
-                            }
-                          
-                            function drawTurtle(ctx, centerX, centerY, angle, isDrawing) {
-                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        }
+
+                        function penUp() {
+                            isPenDown = false;
+                            updateCanvas();
+
+                        }
+                        function changeCanvasBackgroundColor(color) {
+                        // Set the background color of the canvas
+                        canvas.style.backgroundColor = color;
+                        updateCanvas();
+
+                    }
+
+                            function drawTurtle(ctx, centerX, centerY, angle, isDrawing,data, penColor) {
+                            // Ajouter les coordonnées actuelles au tableau des positions précédentes
+                            previousPositions.push({ x: centerX, y: centerY });
+
+                            // Effacer le canvas
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                             if (!isTurtleVisible) {
                                 return;  // Quitter la fonction si la tortue n'est pas visible
                             }
 
-                            previousPositions.push({ x: centerX, y: centerY });
-
-                            ctx.beginPath();
-                            ctx.moveTo(previousX, previousY);
-                            ctx.lineTo(centerX, centerY);
-                            ctx.stroke();
-
-                            // ... (le reste de votre code)
-
-                            // Mettre à jour les coordonnées précédentes
-                            previousX = centerX;
-                            previousY = centerY;
-
-                            if (isDrawing) {
-                                // Dessiner la trace
+                            // Le reste de votre code existant pour les autres commandes
+                            if (isPenDown && previousPositions.length > 1) {
+                                // Dessiner toutes les traces précédentes
                                 ctx.beginPath();
-                                ctx.moveTo(previousX, previousY);
-                                ctx.lineTo(centerX, centerY);
+                                ctx.moveTo(previousPositions[0].x, previousPositions[0].y);
+                                for (let i = 1; i < previousPositions.length; i++) {
+                                    ctx.lineTo(previousPositions[i].x, previousPositions[i].y);
+                                }
+                                ctx.strokeStyle = penColor;
                                 ctx.stroke();
                             }
 
-                            ctx.save();
-                            ctx.translate(centerX, centerY);
-                            ctx.rotate(angle * Math.PI / 180);
+                            // Dessiner la tortue actuelle
+                            if (isPenDown) {
+                                ctx.save();
+                                ctx.translate(centerX, centerY);
+                                ctx.rotate(angle * Math.PI / 180);
+                           
 
-                            ctx.beginPath();
-                            ctx.moveTo(0, -triangleSize / 2);
-                            ctx.lineTo(triangleSize / 2, triangleSize / 2);
-                            ctx.lineTo(-triangleSize / 2, triangleSize / 2);
-                            ctx.closePath();
-
-                            if (isDrawing) {
-                                // Changer la couleur du trait selon les besoins
-                                ctx.strokeStyle = "black";
-                                ctx.stroke();
-                            } else {
-                                // Changer la couleur de remplissage selon les besoins
+                                // Dessin de la carapace de la tortue
+                                ctx.beginPath();
+                                ctx.arc(0, 0, triangleSize, 0, 2 * Math.PI, false);
                                 ctx.fillStyle = "green";
                                 ctx.fill();
-                            }
+                                ctx.lineWidth = 2;
+                                ctx.strokeStyle = "black";
+                                ctx.stroke();
 
-                            ctx.restore();
+                                // Dessin des pattes avant
+                                drawLeg(ctx, -triangleSize / 2, triangleSize / 2);
+
+                                // Dessin des pattes arrière
+                                drawLeg(ctx, triangleSize / 2, triangleSize / 2);
+
+                                // Dessin de la tête
+                                ctx.beginPath();
+                                ctx.arc(triangleSize * 1.2, 0, triangleSize / 2, 0, 2 * Math.PI, false);
+                                ctx.fillStyle = "green";
+                                ctx.fill();
+                                ctx.stroke();
+
+                                ctx.restore();
+                            }
+                        
+                    }
+                        function drawLeg(ctx, x, y) {
+                            ctx.beginPath();
+                            ctx.moveTo(x, y);
+                            ctx.lineTo(x - triangleSize / 4, y + triangleSize / 4);
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
                         }
                         function clearCanvas() {
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            // Redessiner les anciennes positions sans les lignes de traçage
-                            for (var i = 0; i < previousPositions.length - 1; i++) {
-                                ctx.beginPath();
-                                ctx.moveTo(previousPositions[i].x, previousPositions[i].y);
-                                ctx.lineTo(previousPositions[i + 1].x, previousPositions[i + 1].y);
-                                ctx.stroke();
-                            }
-                        }
-                                            
+                            console.log('Effacer le canvas');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        previousPositions = [];  // Remise à zéro des positions précédentes
+                         updateCanvas(); 
+                    }
                             document.getElementById('fileInput').addEventListener('change', function () {
                                 var fileList = this.files;
                                 var fileNames = Array.from(fileList).map(file => file.name);
                                 console.log('Fichiers sélectionnés :', fileNames);
                             });
-                                function clearConsole() {
-                                    var command = "VT"; // Commande pour effacer la console
-
-                                    // Envoyez la commande au backend via Ajax
-                                    fetch('/dashboard', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                                        },
-                                        body: JSON.stringify({ command: command })
-                                    })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        // Traitez la réponse du serveur si nécessaire
-                                        console.log('Console effacée avec succès');
-                                    })
-                                    .catch(error => {
-                                        console.error('Erreur lors de l\'effacement de la console :', error);
-                                    });
-                                }
-                                var command = "FCC #RRGGBB"; // Remplacez #RRGGBB par la couleur RGB souhaitée
-                                var command = "FCAP 45"; // Remplacez 45 par l'angle souhaité
-                                var command = "FPOS 100 50"; // Remplacez 100 et 50 par les coordonnées souhaitées
                         </script>
                     </div>
                 </div>
